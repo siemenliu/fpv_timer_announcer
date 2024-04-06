@@ -1,10 +1,12 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_tts/flutter_tts.dart';
+import 'package:fpv_timer_announcer/tts.dart';
 import 'package:http/http.dart' as http;
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+  TTSTool();
   runApp(const MyApp());
 }
 
@@ -60,6 +62,7 @@ class Player {
         absTime: l['abs_time'],
       );
       lapList.add(lap);
+      // TTSTool().speak("${json['name']}玩家 ${lap.duration / 1000}秒");
     }
 
     return switch (json) {
@@ -86,11 +89,17 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   late Future<List<Player>> playerList = fetchPlayer();
+  final Map<String, int> playerMap = {};
 
   @override
   void initState() {
     super.initState();
-    showLanguages();
+  }
+
+  void speakByPlayer(Player player) {
+    String content =
+        "玩家：${player.name} 用时：${player.laps.last.duration / 1000}秒";
+    TTSTool().speak(content);
   }
 
   Future<List<Player>> fetchPlayer() async {
@@ -106,6 +115,18 @@ class _HomePageState extends State<HomePage> {
       for (int i = 0; i < ps.length; i++) {
         Player p = Player.fromJson(ps[i]);
         players.add(p);
+
+        bool ttsSpeak = false;
+        if (!playerMap.containsKey(p.name)) {
+          playerMap[p.name] = p.laps.length;
+          ttsSpeak = true;
+        } else {
+          if (playerMap[p.name] != p.laps.length) {
+            playerMap[p.name] = p.laps.length;
+            ttsSpeak = true;
+          }
+        }
+        if (ttsSpeak) speakByPlayer(p);
       }
       return players;
     } else {
@@ -113,12 +134,6 @@ class _HomePageState extends State<HomePage> {
       // then throw an exception.
       throw Exception('Failed to load player');
     }
-  }
-
-  Future<void> showLanguages() async {
-    FlutterTts flutterTts = FlutterTts();
-    List<dynamic> languages = await flutterTts.getLanguages;
-    debugPrint("languages: ${languages.toString()}");
   }
 
   @override
