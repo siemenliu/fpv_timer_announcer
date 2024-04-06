@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_tts/flutter_tts.dart';
 import 'package:http/http.dart' as http;
 
 void main() {
@@ -86,6 +87,12 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   late Future<List<Player>> playerList = fetchPlayer();
 
+  @override
+  void initState() {
+    super.initState();
+    showLanguages();
+  }
+
   Future<List<Player>> fetchPlayer() async {
     final List<Player> players = [];
     final response = await http.get(Uri.parse(
@@ -108,9 +115,10 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  @override
-  void initState() {
-    super.initState();
+  Future<void> showLanguages() async {
+    FlutterTts flutterTts = FlutterTts();
+    List<dynamic> languages = await flutterTts.getLanguages;
+    debugPrint("languages: ${languages.toString()}");
   }
 
   @override
