@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -90,10 +91,23 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   late Future<List<Player>> playerList = fetchPlayer();
   final Map<String, int> playerMap = {};
+  Timer? _timer;
 
   @override
   void initState() {
     super.initState();
+
+    _timer = Timer.periodic(const Duration(seconds: 3), (timer) {
+      setState(() {
+        playerList = fetchPlayer();
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
   }
 
   void speakByPlayer(Player player) {
@@ -104,14 +118,15 @@ class _HomePageState extends State<HomePage> {
 
   Future<List<Player>> fetchPlayer() async {
     final List<Player> players = [];
-    final response = await http.get(Uri.parse(
-        'https://run.mocky.io/v3/824e2501-e0aa-4a01-9094-f9bab64afeb0'));
+    final response =
+        await http.get(Uri.parse('http://192.168.1.168:8000/mock.json'));
 
     if (response.statusCode == 200) {
       // If the server did return a 200 OK response,
       // then parse the JSON.
-      Map<String, dynamic> body = jsonDecode(response.body);
+      Map<String, dynamic> body = json.decode(utf8.decode(response.bodyBytes));
       List ps = body['status']['players'];
+      debugPrint('ps count: ${ps.length}');
       for (int i = 0; i < ps.length; i++) {
         Player p = Player.fromJson(ps[i]);
         players.add(p);
@@ -180,12 +195,13 @@ class _HomePageState extends State<HomePage> {
                             ),
                             title: Text(
                               "${lap.duration / 1000.0}s",
-                              style: TextStyle(color: Colors.red, fontSize: 15),
+                              style: const TextStyle(
+                                  color: Colors.red, fontSize: 15),
                             ),
                             subtitle: Text(
                               "RSSI: ${lap.rssi}",
-                              style:
-                                  TextStyle(color: Colors.grey, fontSize: 12),
+                              style: const TextStyle(
+                                  color: Colors.grey, fontSize: 12),
                             ),
                           );
                         },
