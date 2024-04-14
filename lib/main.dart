@@ -46,16 +46,20 @@ class Player {
   final String name;
   final String ipaddr;
   final List<Lap> laps;
+  final int indexOfBestLap;
 
-  const Player({
-    required this.name,
-    required this.ipaddr,
-    required this.laps,
-  });
+  Player(
+      {required this.name,
+      required this.ipaddr,
+      required this.laps,
+      required this.indexOfBestLap});
 
   factory Player.fromJson(Map<String, dynamic> json) {
     List<Lap> lapList = [];
-    for (Map<String, dynamic> l in json['laps']) {
+    int bestDuring = 999999;
+    int bestDuringIndex = -1;
+    for (int i = 0; i < json['laps'].length; i++) {
+      Map<String, dynamic> l = json['laps'][i];
       Lap lap = Lap(
         id: l['id'],
         duration: l['duration'],
@@ -63,6 +67,12 @@ class Player {
         absTime: l['abs_time'],
       );
       lapList.add(lap);
+      if (lap.duration < bestDuring) {
+        bestDuring = lap.duration;
+        bestDuringIndex = i;
+        debugPrint(
+            '${json['name']} best: ${bestDuring} index: ${bestDuringIndex}');
+      }
       // TTSTool().speak("${json['name']}玩家 ${lap.duration / 1000}秒");
     }
 
@@ -75,6 +85,7 @@ class Player {
           name: name,
           ipaddr: ipaddr,
           laps: lapList,
+          indexOfBestLap: bestDuringIndex,
         ),
       _ => throw const FormatException('Failed to load player.'),
     };
@@ -102,6 +113,9 @@ class _HomePageState extends State<HomePage> {
         playerList = fetchPlayer();
       });
     });
+
+    TTSTool().speak("Hello, 欢迎使用！FPV计时播报器");
+    // TTSTool().speak("Welcome to use FPV Timer Announcer, 欢迎使用！");
   }
 
   @override
@@ -112,21 +126,22 @@ class _HomePageState extends State<HomePage> {
 
   void speakByPlayer(Player player) {
     String content =
-        "玩家：${player.name} 用时：${player.laps.last.duration / 1000}秒";
+        "玩家: ${player.name} 用时: ${player.laps.last.duration / 1000} 秒";
     TTSTool().speak(content);
   }
 
   Future<List<Player>> fetchPlayer() async {
     final List<Player> players = [];
     final response =
-        await http.get(Uri.parse('http://192.168.1.168:8000/mock.json'));
+        await http.get(Uri.parse('http://10.0.0.1:80/api/v1/settings'));
+    // await http.get(Uri.parse('http://192.168.1.168:8000/mock.json'));
 
     if (response.statusCode == 200) {
       // If the server did return a 200 OK response,
       // then parse the JSON.
       Map<String, dynamic> body = json.decode(utf8.decode(response.bodyBytes));
       List ps = body['status']['players'];
-      debugPrint('ps count: ${ps.length}');
+      debugPrint('ps count: ${ps.length} ${ps}');
       for (int i = 0; i < ps.length; i++) {
         Player p = Player.fromJson(ps[i]);
         players.add(p);
@@ -188,11 +203,13 @@ class _HomePageState extends State<HomePage> {
                           Lap lap = player.laps[index];
                           return ListTile(
                             leading: const Icon(Icons.timer),
-                            trailing: const Text(
-                              "Best",
-                              style:
-                                  TextStyle(color: Colors.green, fontSize: 12),
-                            ),
+                            trailing: index == player.indexOfBestLap
+                                ? const Text(
+                                    "Best",
+                                    style: TextStyle(
+                                        color: Colors.green, fontSize: 12),
+                                  )
+                                : const Text(""),
                             title: Text(
                               "${lap.duration / 1000.0}s",
                               style: const TextStyle(
